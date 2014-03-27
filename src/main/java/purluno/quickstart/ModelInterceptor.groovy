@@ -11,6 +11,8 @@ import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
 import org.springframework.web.servlet.ModelAndView
 import org.springframework.web.servlet.handler.HandlerInterceptorAdapter
+import org.springframework.web.servlet.view.AbstractTemplateView
+import org.springframework.web.servlet.view.InternalResourceView
 
 /**
  * 뷰에서 활용할 다양한 모델을 추가한다.
@@ -26,15 +28,36 @@ class ModelInterceptor extends HandlerInterceptorAdapter implements ApplicationC
 
 	private ApplicationContext applicationContext
 
+	private boolean isScreenView(ModelAndView modelAndView) {
+		if (modelAndView.view in AbstractTemplateView) {
+			true
+		} else if (modelAndView.view in InternalResourceView) {
+			true
+		} else if (modelAndView.view != null) {
+			false
+		} else if (modelAndView.viewName == null) {
+			false
+		} else if (modelAndView.viewName.startsWith("redirect:")) {
+			false
+		} else {
+			true
+		}
+	}
+
 	/**
-	 * 뷰에서 활용할 다양한 모델을 추가한다. (클래스 설명 참조)
+	 * 화면 표시용 뷰에서 활용할 다양한 모델을 추가한다. (클래스 설명 참조)
 	 */
 	@Override
 	public void postHandle(HttpServletRequest request,
 			HttpServletResponse response, Object handler,
 			ModelAndView modelAndView) throws Exception {
-		modelAndView.addObject("env", applicationContext.environment)
-		modelAndView.addObject("subject", SecurityUtils.subject)
+		if (isScreenView(modelAndView)) {
+			modelAndView.addObject("contextPath", request.contextPath)
+			modelAndView.addObject("env", applicationContext.environment)
+			def subject = SecurityUtils.subject
+			modelAndView.addObject("subject", subject)
+			modelAndView.addObject("principal", subject.principal ?: null)
+		}
 	}
 
 	@Override
